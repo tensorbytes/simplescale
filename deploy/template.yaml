@@ -1,0 +1,71 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: simpleautoscale
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "autoscale of Deployment"
+spec:
+  workload:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+  schematic:
+    cue:
+      template: |
+        output: {
+            apiVersion: "autoscale.scale.shikanon.com/v1alpha1"
+            kind:       "RecommendationScaleFactor"
+            metadata: {
+            name: context.name
+            }
+            spec: {
+                cooldown: "5m"
+                desiredValue: parameter.desiredValue
+                minScope: 10
+                maxScope: 500
+                query: "100 * avg (rate (container_cpu_usage_seconds_total{image!=\"\",container=\"\(context.name)\",pod=~\"^\(context.name)()().*$\",kubernetes_io_hostname=~\"^.*$\"}[5m]))/avg (kube_pod_container_resource_requests_cpu_cores{pod=~\"^\(context.name)()().*$\"})"         
+            }
+
+        }
+
+        outputs: simpleautoscaler: {
+            apiVersion: "autoscale.scale.shikanon.com/v1alpha1"
+            kind:       "SimpleAutoScaler"
+            metadata: {
+            name: "\(context.name)-cpu"
+            }
+            spec: {
+                targetRef: {
+                    apiVersion: "apps/v1"
+                    kind: "Deployment"
+                    name: context.name
+                }
+                policy: [
+                    {
+                        field: "spec.template.spec.containers.0.resources.requests.cpu"
+                        name: "requests-cpu"
+                        type: "cpu"
+                        scaleFactorObject: {
+                            apiVersion: "autoscale.scale.shikanon.com/v1alpha1"
+                            field: "status.scaleFactor"
+                            kind: "RecommendationScaleFactor"
+                            name: context.name
+                            namespace: context.namespace
+                        }
+                        update: {
+                            downscaleWindow: parameter.downscaleWindow
+                            maxAllowed: "32"
+                            minAllowed: "10m"
+                            upscaleWindow: parameter.upscaleWindow
+                        }
+                    },
+                ]
+            }
+        }
+
+        parameter: {
+            desiredValue: *"100" | string
+            downscaleWindow: *"10m" | string
+            upscaleWindow: *"5m" | string
+        }

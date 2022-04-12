@@ -1,0 +1,329 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simplescaler-recommender
+  name: simplescaler-recommender
+  namespace: operator
+spec:
+  selector:
+    matchLabels:
+      app: simplescaler-recommender
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "8000"
+        prometheus.io/scrape: "true"
+      labels:
+        app: simplescaler-recommender
+    spec:
+      containers:
+      - image: registry.cn-beijing.aliyuncs.com/shikanon/simplescaler-recommender:v0.0.3
+        imagePullPolicy: Always
+        name: recommender
+        command:
+        - /app/scale-recommender
+        - --runonce-interval=5s
+        - --promethues-address=http://prometheus-mp-server.cluster-monitor.svc:80
+        ports:
+          - containerPort: 8000
+            name: metrics
+            protocol: TCP
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "100Mi"
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+      serviceAccount: simplescaler
+      serviceAccountName: simplescaler
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simplescaler-updater
+  name: simplescaler-updater
+  namespace: operator
+spec:
+  selector:
+    matchLabels:
+      app: simplescaler-updater
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "8000"
+        prometheus.io/scrape: "true"
+      labels:
+        app: simplescaler-updater
+    spec:
+      containers:
+      - image: registry.cn-beijing.aliyuncs.com/shikanon/simplescaler-update:v0.0.2
+        imagePullPolicy: Always
+        name: updater
+        command:
+        - /app/autoscaler
+        - --runonce-interval=5s
+        ports:
+          - containerPort: 8000
+            name: metrics
+            protocol: TCP
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "100Mi"
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+      serviceAccount: simplescaler
+      serviceAccountName: simplescaler
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simplescaler-webhook
+    app.kubernetes.io/instance: simpleautoscale-webhook
+    app.kubernetes.io/name: simpleautoscale-webhook
+  name: simplescaler-webhook
+  namespace: operator
+spec:
+  selector:
+    matchLabels:
+      app: simplescaler-webhook
+      app.kubernetes.io/instance: simpleautoscale-webhook
+      app.kubernetes.io/name: simpleautoscale-webhook
+  template:
+    metadata:
+      labels:
+        app: simplescaler-webhook
+        app.kubernetes.io/instance: simpleautoscale-webhook
+        app.kubernetes.io/name: simpleautoscale-webhook
+    spec:
+      containers:
+      - image: registry.cn-beijing.aliyuncs.com/shikanon/simplescaler-webhook:v0.0.2
+        imagePullPolicy: Always
+        name: webhook
+        command:
+        - /app/scale-webhook
+        - --port=:8000
+        - --key=/app/cert/private.key
+        - --cert=/app/cert/cert.pem
+        ports:
+          - containerPort: 8000
+            name: http
+            protocol: TCP
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "100Mi"
+          requests:
+            cpu: "10m"
+            memory: "50Mi"
+        volumeMounts:
+        - mountPath: /app/cert
+          name: config
+      serviceAccount: simplescaler
+      serviceAccountName: simplescaler
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: scale-webhhok-config
+        name: config
+---
+apiVersion: v1
+data:
+  cert.pem: |
+    -----BEGIN CERTIFICATE-----
+    MIIDvDCCAqSgAwIBAgIQMpNRTL5SAnh9mJbN5hQnaDANBgkqhkiG9w0BAQsFADAp
+    MRkwFwYDVQQKExBDQ0UgVGVjaG5vbG9naWVzMQwwCgYDVQQDEwNDQ0UwHhcNMjIw
+    MzIyMDkyMzI2WhcNMzIwMjEwMjEyMzI2WjAvMS0wKwYDVQQDEyRzaW1wbGVhdXRv
+    c2NhbGUtd2ViaG9vay5vcGVyYXRvci5zdmMwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+    DwAwggEKAoIBAQDTH+7SbnoOv0FiQyHV/Bbhj2Y+/TsFYbUvzypixH8lgtviHlqW
+    gtxZhNNhweP4mLg0xXo9LYvGq91sg90nfO059Sh4tY1EoKC9WbBBT7qVRleM9Gxv
+    m5/yzsrhsxAWnDli3SHByIFvxjGeZojaTilsvLmZMNvv1mP/pKyuPjE0NHpWG8pz
+    C2ExAOxYcyRfJgZlvw/xwANJIQ6Ep0uvSjpfyDVtCSCKwTu7BmpqQ0T3KfHplUpV
+    NzntklqygLXyHaiIGhtGkHO5A4hco+TR8yWjayVwzcsP9Lp+LrbvU7lxaR6BCLU6
+    ELVtNNWT+ND06CREpevxDLQ/pyQ1FwsrvIVdAgMBAAGjgdkwgdYwDgYDVR0PAQH/
+    BAQDAgWgMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwgaAGA1Ud
+    EQSBmDCBlYIXc2ltcGxlYXV0b3NjYWxlLXdlYmhvb2uCIHNpbXBsZWF1dG9zY2Fs
+    ZS13ZWJob29rLm9wZXJhdG9ygiRzaW1wbGVhdXRvc2NhbGUtd2ViaG9vay5vcGVy
+    YXRvci5zdmOCMnNpbXBsZWF1dG9zY2FsZS13ZWJob29rLm9wZXJhdG9yLnN2Yy5j
+    bHVzdGVyLmxvY2FsMA0GCSqGSIb3DQEBCwUAA4IBAQA8c3bW8sNjxnxRKYFys61T
+    Ipm/XpsCyguwlTwRt5VfQHEead8n9x+j9EeY9ENKCNl2k1uTYs53RH/hyRnHggF0
+    2kpRdIwItF92tH6UkzZzm68HUIPPjFzih8ie2TWMrALpsaxX9Wcz8adtzBYSFdyZ
+    P0K48uBAR19DkSAtcZFRwhMpXHHGemb9SHrLXbqhR1dpRqe+HJllec20f6xXgk2t
+    tpF0wgd8WDkxKeI6HPWUxqqKR5bqUq5x4tk1eVr5aC/Ah687cLNaI+2yigin2aXD
+    sp86uBsySBVQrz9LDy+7gWPXAlSDoIZCc89MB15SUdjkbFRAX94B64OoVgO5eaBL
+    -----END CERTIFICATE-----
+  private.key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEpAIBAAKCAQEA0x/u0m56Dr9BYkMh1fwW4Y9mPv07BWG1L88qYsR/JYLb4h5a
+    loLcWYTTYcHj+Ji4NMV6PS2LxqvdbIPdJ3ztOfUoeLWNRKCgvVmwQU+6lUZXjPRs
+    b5uf8s7K4bMQFpw5Yt0hwciBb8YxnmaI2k4pbLy5mTDb79Zj/6Ssrj4xNDR6VhvK
+    cwthMQDsWHMkXyYGZb8P8cADSSEOhKdLr0o6X8g1bQkgisE7uwZqakNE9ynx6ZVK
+    VTc57ZJasoC18h2oiBobRpBzuQOIXKPk0fMlo2slcM3LD/S6fi6271O5cWkegQi1
+    OhC1bTTVk/jQ9OgkRKXr8Qy0P6ckNRcLK7yFXQIDAQABAoIBAQCz2PwE3n+zmFEG
+    d9GXC8wiEZo0BlwE1ZsXQw8EXAdD2RmeoeThWlCDIZdAK38cAlzI94COJQJxF27k
+    ReBbBxy+xozXZzEUSREkvAZdXKHBD879ECpfWN8EZAyH/5Ww7Rwlj+J1xWwd32Pd
+    X9MsxHCdZJdmXCy/Po6o84r2U5xurslJWBUTRqBtLzMLr33PgJdrINalWIWNbiDd
+    15aNhaM+CGoTQZU6RKMm1oMtQSrE14gf1GakzpwaJtDrzsU7tDbPkfnr7C7Va7Uy
+    UrC2dV+zEdr0vmkdA5nzxhsCBlGSfo8tOZ7pV//NRUBJxPxk+0hW8FzFAhVzqIl0
+    nH6gQ1cxAoGBAPBasXRIhla2ljTykVhdSEW8APkZCV3x55NN5H1PvNc5QCvLfpUG
+    OBVoX7rFHbDLFWrl7CZjLpJfSzJZd0wnJZWogI3gc95Ym3jAaHu0ecE6XEG7IjJp
+    zSt+l0umgZURz6aj/cW7oJyTcIHahAzTrE2oClZbOQKmoLqXvG9XNQanAoGBAODe
+    J027UC41mWVXO8H/RNuzVZFvTjYWVPJ5W95mLEM8opiuo5RlXTIVH87KfVhsRE3T
+    o4jlAVT1QVQ/I6M6kuMvYlX/Rsaiz7fe9gI6s6xh7y9lNz6AINA+cw1oxEJNzp2m
+    KN5+3V+ujFcHzrlV7pNXXQCo7R91afyHezS+kJhbAoGANsQjjSB9Y8LE5RmkXqMa
+    tbEJ87httvdI0fq8poUFvXCxG4mJtUEuhEo9DdyeUEtl/O6Y6YJN+VI3WyihkzuU
+    R86WRD2xiSddfZ0x8YYE/C9lGCEgwKX09wUoSjeNbT8atpjFWUnQZfz+dMgqsJWG
+    vEce2+B7VAxNsVajvCb90R8CgYEAl/EkR57I5+BpvRM7mrMc2QMNT48RHvTqA0lD
+    bTxGrkv7ZgWjHHN9jIi/jGBAYA4P/TKDLs3mn3x03zMmpnW+qOnsnUU3kqKSjqCG
+    RC1cGJ+4GaNft8il43A/F5FyA4dFlDqhJO4+MRflVi09XvgUk9SVUAvU5cvViMAW
+    3SXi2D8CgYB4DgGiY3gq7QeJJ1VzG6u7nKg7sqCZh4uvP14+UxwY0QKC8HLff0jB
+    OoNFsfjXo+qm1ptgAE4eW85NPvLAqSfuJlngKJam+opejUzOKJbUum0SAT+N0Y6W
+    MiWSHk17a4sm4UECbnjNC5IQ0yKSdJRpS2EmAQSQ3XMiOdMZ6sW3Pw==
+    -----END RSA PRIVATE KEY-----
+kind: ConfigMap
+metadata:
+  name: scale-webhhok-config
+  namespace: operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: simpleautoscale-webhook
+    app.kubernetes.io/instance: simpleautoscale-webhook
+    app.kubernetes.io/name: simpleautoscale-webhook
+  name: simpleautoscale-webhook
+  namespace: operator
+spec:
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app.kubernetes.io/instance: simpleautoscale-webhook
+    app.kubernetes.io/name: simpleautoscale-webhook
+  type: ClusterIP
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: simpleautoscale-webhook.shikanon.com
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM4akNDQWRxZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFwTVJrd0Z3WURWUVFLRXhCRFEwVWcKVkdWamFHNXZiRzluYVdWek1Rd3dDZ1lEVlFRREV3TkRRMFV3SUJjTk1qRXdOREEzTURJeE5UUTBXaGdQTWpBMQpNVEF6TXpFd01qRTFORFJhTUNreEdUQVhCZ05WQkFvVEVFTkRSU0JVWldOb2JtOXNiMmRwWlhNeEREQUtCZ05WCkJBTVRBME5EUlRDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTTJnclpuVnBEd24KNEZ4UjlzK25sT2EwQnhZVExTT3ZteWlNRy9NMTl0bDhtMitNQjNCQ2RaMXZUNzNxa2ZrL29wK010cXZmbUVLVAplYjdramhmdGFQWkxPaGY5YUJKblNyNFZ2d3ZPWGcxejNZTkpCejgwRnE1aTR2OEw3ZUk2WXJPakdYbW51VjRBClFxOFFTa3lpUHRrTHdkU1BveGdTWFRaSDhJZVhMV2MwYVRHbDBYSXhZUzI4d1R5NWZpRktFYTl0WFdKY2ZmWVQKU09lTTJCRHZvNGV0MTZrSzBsTlZXcUNzQ1J1b240cWxMOGRUUnVqK0RKeklWenU5RDVMQktGWVdnbG82TXdEVQpqQjJXaTRINjkzbVRiclNWN05kVWtLSUtOZDhmVmRCQXF1MHV0bjIvQ2FWT2pPNWk5QWFRQnB0dDlOM1Npb0ZoCm14TndTVTI2dVprQ0F3RUFBYU1qTUNFd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFMZ2FsMFhZWEZkSGo4VDY5dU4vUXlzSEZwbVJoaEgzSUdULwpFbld2Tk9GVHRyM284Y2pUVXdLMnZXdHpTM1E0TFM3ck9YRnlPOGdLVXVZODVMU05BcC83OVJGLzgyTFEwR2FSCllVRGpNVkxBUW43cDVRSzJCTDRZa20rNXI5T1B0ZU8ydmRkSDBESkRIUUFMdnVoWDFNQ0NIcEVzclE3bnpsZUMKTndFcy91cFprUklKMDJDRU5YbndLZU9Vemd1MWlFTXBMUUd5alQ2eUxLQ01YSUdHRUtjSGFZOHNOR2FKYW9sZwpEUlNNTzZFekh3c3VjMitOSXB5dU5qUGpHMGgwZnB1b0xCWUFDNjA0V3R0L2FYUTEvS0FuSEJtYm80MDZTeTlkCjY5U0s2VW9xUksrMEVOM0VDOGpHYTdMTDgwQTAyazRvVVVsQWRQZk9qbXB2dllZM0xwdz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: simpleautoscale-webhook
+      namespace: operator
+      path: /mutating-resource
+      port: 8000
+  # 失败策略忽略
+  failurePolicy: Ignore 
+  matchPolicy: Exact
+  name: simpleautoscale-webhook.shikanon.com
+  reinvocationPolicy: Never
+  # objectSelector: # 对象过滤条件
+  #     matchExpressions:
+  #     - key: autoscale
+  #       operator: In
+  #       values:
+  #       - enabled
+  #       - "true"
+  rules:
+  - apiGroups:
+    - "apps"
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - deployments
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: simplescaler
+  namespace: operator
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: simplescaler
+    groups: simplescaler
+  name: simplescaler
+  namespace: operator
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: simplescaler
+    groups: simplescaler
+  name: simplescaler
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - patch
+  - update
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: simplescaler
+  namespace: operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: simplescaler
+subjects:
+- kind: ServiceAccount
+  name: simplescaler
+  namespace: operator
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: simplescaler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: simplescaler
+subjects:
+- kind: ServiceAccount
+  name: simplescaler
+  namespace: operator

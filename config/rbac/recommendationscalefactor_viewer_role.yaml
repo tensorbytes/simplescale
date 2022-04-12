@@ -1,0 +1,20 @@
+# permissions for end users to view recommendationscalefactors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: recommendationscalefactor-viewer-role
+rules:
+- apiGroups:
+  - autoscale.scale.shikanon.com
+  resources:
+  - recommendationscalefactors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscale.scale.shikanon.com
+  resources:
+  - recommendationscalefactors/status
+  verbs:
+  - get

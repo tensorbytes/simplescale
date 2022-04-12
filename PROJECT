@@ -1,0 +1,22 @@
+domain: scale.shikanon.com
+layout: go.kubebuilder.io/v3
+projectName: simplescale
+repo: github.com/tensorbytes/simplescale
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: scale.shikanon.com
+  group: autoscale
+  kind: SimpleAutoScaler
+  path: github.com/tensorbytes/simplescale/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: scale.shikanon.com
+  group: autoscale
+  kind: RecommendationScaleFactor
+  path: github.com/tensorbytes/simplescale/api/v1alpha1
+  version: v1alpha1
+version: "3"

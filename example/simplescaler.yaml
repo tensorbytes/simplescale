@@ -1,0 +1,112 @@
+Kind: SimpleAutoScaler
+metadata:
+  name: xx
+  namespace: xxx
+spec:
+  # 作用的资源类型
+  targetRef:
+    kind: pod
+    version: v1
+    selector:
+      xx: xxx
+  policy:
+  - name: "nginx-cpu"
+    field: "spec.containers.0.resources.requests.cpu"
+    type: "cpu"
+    update:
+      downscaleWindow: "10m"
+      upscaleWindow: "30m"
+      mode: "default" # 更新模式,"onlyUpScale","onlyDownScale"
+      minAllowed: 100m
+      maxAllowed: "10"
+    scaleFactorObject:
+      kind: RecommendationScaleFactor
+      version: v1alpha1
+      name: xx
+      namespace: xxx
+      field: "status.scaleFactor"
+  - name: "nginx-memory"
+    field: "spec.containers[name=nginx].resources.requests.cpu"
+    update:
+      downscaleWindow: "10m"
+      upscaleWindow: "30m"
+      mode: "default" # 更新模式,"onlyUpScale","onlyDownScale"
+      minAllowed: 100m
+      maxAllowed: "10"
+    scaleFactorObject:
+      kind: RecommendationScaleFactor
+      version: v1alpha1
+      name: xx
+      field: "status.scaleFactor"
+status:
+  # conditions 可以检测vpa是否符合条件，也可以用于记录状态作为checkpoint
+  conditions:
+  - type: MatchedAllResource # 检查 targetRef 所包涵的资源，写入status
+    status: "true" # "false", "unknow"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  - type: CheckPolicyFieldValue # 检查 policy 中的 field是否有问题，将值写入 status 的currentFieldValue
+    status: "true"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  - type: GetScaleFactor # 检查 policy 中的 scaleFactor 是否有问题，将值写入 status 的 scaleFactor
+    status: "true"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  - type: UpdatedFieldCondition # 检查通过 currentMetric*currentFieldValue 出来的 desiredFieldValue 是否在 minAllowed 和 maxAllowed 之间，将值写入 status
+    status: "true"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  - type: EndCooldown # 检查当前时间是否在 update 中的 downscaleWindow 和 upscaleWindow，如果为true则表明可以更新，更新 status 中的 lastUpScaleTime 和 lastDownScaleTime
+    status: "true"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  resources:
+  - target:
+      kind: pod
+      version: v1
+      name: xxx-01
+    fields:
+    - scaleFactor: "3"
+      currentFieldValue: "100m"
+      desiredFieldValue: "300m"
+      lastUpScaleTime: "2021-12-17T10:19:48Z" 
+      lastDownScaleTime: "2021-12-17T10:19:48Z"
+  - target:
+      kind: pod
+      version: v1
+      name: xxx-02
+    fields:
+    - scaleFactor: "1" # 保留两位小数
+      currentFieldValue: "300m"
+      desiredFieldValue: "300m"
+      lastUpScaleTime: "2021-12-17T10:19:48Z" 
+      lastDownScaleTime: "2021-12-17T10:19:48Z"
+
+---
+Kind: RecommendationScaleFactor
+metadata:
+  name: xx
+  namespace: xxx
+spec:
+  ref: # generator
+    kind: Pod
+    version: v1
+    name: xxx-01
+  query: xxx
+  desiredValue: "30"
+  cooldown: "30s"
+  minScope: 10 # 最小变化幅度，百分比值
+status:
+  conditions:
+  - type: QueryExist # 检查 targetRef 所包涵的资源，写入status
+    status: "true" # "false", "unknow"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  - type: ValidRecommendValue # 有效的推荐值
+    status: "true" # "false", "unknow"
+    lastTransitionTime: "2021-12-17T10:19:48Z"
+    message: "xxx"
+  lastCoolDownTime: "2021-12-17T10:19:48Z"
+  currentValue: "100"
+  scaleFactor: 1 #默认为1

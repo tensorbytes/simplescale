@@ -1,0 +1,12 @@
+kind: RecommendationScaleFactor
+apiVersion: autoscale.scale.shikanon.com/v1alpha1
+metadata:
+  name: test
+spec:
+  query: |
+    100 * sum (rate (container_cpu_usage_seconds_total{
+    image!="",container="autoscale-test",pod=~"^autoscale-test()().*$",kubernetes_io_hostname=~"^.*$"}[5m]
+    )) by (pod)/sum (kube_pod_container_resource_requests_cpu_cores{pod=~"^autoscale-test()().*$"})by (pod)
+  desiredValue: "30"
+  cooldown: "30s"
+  minScope: 10 # 最大变化幅度，百分比值

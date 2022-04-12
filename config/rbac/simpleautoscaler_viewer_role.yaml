@@ -1,0 +1,20 @@
+# permissions for end users to view simpleautoscalers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: simpleautoscaler-viewer-role
+rules:
+- apiGroups:
+  - autoscale.scale.shikanon.com
+  resources:
+  - simpleautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscale.scale.shikanon.com
+  resources:
+  - simpleautoscalers/status
+  verbs:
+  - get

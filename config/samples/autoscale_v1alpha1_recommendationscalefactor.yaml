@@ -1,0 +1,7 @@
+apiVersion: autoscale.scale.shikanon.com/v1alpha1
+kind: RecommendationScaleFactor
+metadata:
+  name: recommendationscalefactor-sample
+spec:
+  # Add fields here
+  foo: bar

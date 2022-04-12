@@ -1,0 +1,24 @@
+# permissions for end users to edit recommendationscalefactors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: recommendationscalefactor-editor-role
+rules:
+- apiGroups:
+  - autoscale.scale.shikanon.com
+  resources:
+  - recommendationscalefactors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscale.scale.shikanon.com
+  resources:
+  - recommendationscalefactors/status
+  verbs:
+  - get

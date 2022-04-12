@@ -1,0 +1,120 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: recommendationscalefactors.autoscale.scale.shikanon.com
+spec:
+  group: autoscale.scale.shikanon.com
+  names:
+    kind: RecommendationScaleFactor
+    listKind: RecommendationScaleFactorList
+    plural: recommendationscalefactors
+    singular: recommendationscalefactor
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: RecommendationScaleFactor is the Schema for the recommendationscalefactors
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RecommendationScaleFactorSpec defines the desired state of
+              RecommendationScaleFactor
+            properties:
+              cooldown:
+                description: cooldown is the time of calcution
+                type: string
+              desiredValue:
+                description: desiredValue
+                type: string
+              minScope:
+                description: minScope is the percentage of desireValue range
+                type: integer
+              query:
+                description: expression of query
+                type: string
+              ref:
+                description: Reference of resources
+                properties:
+                  apiVersion:
+                    description: API version of the referent
+                    type: string
+                  kind:
+                    description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
+                    type: string
+                  name:
+                    description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+            type: object
+          status:
+            description: RecommendationScaleFactorStatus defines the observed state
+              of RecommendationScaleFactor
+            properties:
+              conditions:
+                description: Conditions is set of conditions required for the recommendation
+                  scale
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: LastTransitionTime is the last time the condition
+                        transitioned from on one status to another
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human-readable explaination containing
+                        details
+                      type: string
+                    status:
+                      description: condition status
+                      type: string
+                    type:
+                      description: condition type
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentValue:
+                description: result of query current value
+                type: string
+              lastCoolDownTime:
+                description: last cooldown time
+                format: date-time
+                type: string
+              scaleFactor:
+                description: Calculated by currentvalue and desiredvalue
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

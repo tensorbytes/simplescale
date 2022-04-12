@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: autoscale-test
+    autoscale: "true"
+  name: autoscale-test
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: autoscale-test
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "8000"
+        prometheus.io/scrape: "true"
+      labels:
+        app: autoscale-test
+    spec:
+      containers:
+      - image: docker.io/shikanon096/random-prometheus-metrics:latest
+        imagePullPolicy: Always
+        name: autoscale-test
+        command:
+        - /app/random-metrics
+        - --listen-address=:8000
+        ports:
+          - containerPort: 8000
+            name: metrics
+            protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: "100Mi"
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: autoscale-test
+  name: autoscale-test
+  namespace: default
+spec:
+  ports:
+  - name: http-metrics
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: autoscale-test
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+kind: RecommendationScaleFactor
+apiVersion: autoscale.scale.shikanon.com/v1alpha1
+metadata:
+  name: autoscale-test-custom
+spec:
+  query: |
+    sum(cpu_utilization_rate)by (pod)
+  desiredValue: "50"
+  cooldown: "10m"
+  minScope: 10 # 最小变化幅度，百分比值
+---
+
+kind: RecommendationScaleFactor
+apiVersion: autoscale.scale.shikanon.com/v1alpha1
+metadata:
+  name: autoscale-test-cpu
+  namespace: default
+spec:
+  query: |
+    100 * avg (rate (container_cpu_usage_seconds_total{
+    image!="",container="autoscale-test",pod=~"^autoscale-test()().*$",kubernetes_io_hostname=~"^.*$"}[5m]
+    )) /avg (kube_pod_container_resource_requests_cpu_cores{pod=~"^autoscale-test()().*$"})
+  desiredValue: "1"
+  cooldown: "10m"
+  minScope: 10 # 最小变化幅度,百分比值
+
+---
+kind: SimpleAutoScaler
+apiVersion: autoscale.scale.shikanon.com/v1alpha1
+metadata:
+  name: autoscale-test-custom
+  namespace: default
+spec:
+  targetRef:
+    kind: Deployment
+    apiVersion: apps/v1
+    name: autoscale-test
+  policy:
+  - name: "requests-cpu"
+    field: "spec.template.spec.containers.0.resources.requests.cpu"
+    type: "cpu"
+    update:
+      downscaleWindow: 10m
+      upscaleWindow: 10m
+      minAllowed: 10m
+      maxAllowed: "1"
+    scaleFactorObject:
+      kind: RecommendationScaleFactor
+      apiVersion: autoscale.scale.shikanon.com/v1alpha1
+      name: autoscale-test-custom
+      namespace: default
+      field: "status.scaleFactor"
