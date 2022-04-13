@@ -108,7 +108,7 @@ type SyncSpecFieldToStauts struct {
 
 // get target resource
 // 获取待扩容的目标资源
-func (s *SimpleAutoScalerController) GetTargetResource(ctx context.Context, scalerObj *autoscalev1alpha1.SimpleAutoScaler) (targetResource []*autoscalev1alpha1.SimpleAutoScalerResources, err error) {
+func (s *SimpleAutoScalerController) GetTargetResource(ctx context.Context, scalerObj *autoscalev1alpha1.SimpleAutoScaler) (targetResource []autoscalev1alpha1.SimpleAutoScalerResources, err error) {
 	objReference, err := s.Manager.ListResourceReference(ctx, scalerObj.Spec.TargetRef, scalerObj.GetNamespace())
 	if err != nil {
 		return
@@ -123,7 +123,7 @@ func (s *SimpleAutoScalerController) GetTargetResource(ctx context.Context, scal
 	for _, obj := range objReference {
 		newSimpleAutoScalerResources := autoscalev1alpha1.SimpleAutoScalerResources{
 			Target:         obj,
-			ResourceFields: make([]*autoscalev1alpha1.ResourceStautsField, 0),
+			ResourceFields: make([]autoscalev1alpha1.ResourceStautsField, 0),
 		}
 
 		// check replace or append
@@ -139,18 +139,18 @@ func (s *SimpleAutoScalerController) GetTargetResource(ctx context.Context, scal
 			// 不存在将所有的policy初始化一份到status
 			// 如何将原来status 里面的 resource 资源赋值
 			for _, specPolicyField := range scalerObj.Spec.Policy {
-				statusField, err := s.addNewResourceStautsField(*specPolicyField, *obj, scalerObj.GetNamespace())
+				statusField, err := s.addNewResourceStautsField(specPolicyField, *obj, scalerObj.GetNamespace())
 				if err != nil {
 					klogv2.Error(err)
 					break
 				}
-				newSimpleAutoScalerResources.ResourceFields = append(newSimpleAutoScalerResources.ResourceFields, &statusField)
+				newSimpleAutoScalerResources.ResourceFields = append(newSimpleAutoScalerResources.ResourceFields, statusField)
 			}
-			scalerObj.Status.Resources = append(scalerObj.Status.Resources, &newSimpleAutoScalerResources)
+			scalerObj.Status.Resources = append(scalerObj.Status.Resources, newSimpleAutoScalerResources)
 		} else {
 			// 存在需要保留原来的policy
 			// replace origin resource
-			newResourceFields := make([]*autoscalev1alpha1.ResourceStautsField, 0)
+			newResourceFields := make([]autoscalev1alpha1.ResourceStautsField, 0)
 			oldSimpleAutoScalerResources := scalerObj.Status.Resources[replaceNumber]
 			for _, specPolicyField := range scalerObj.Spec.Policy {
 				notInStatusField := true
@@ -170,12 +170,12 @@ func (s *SimpleAutoScalerController) GetTargetResource(ctx context.Context, scal
 					}
 				}
 				if notInStatusField {
-					statusField, err := s.addNewResourceStautsField(*specPolicyField, *obj, scalerObj.GetNamespace())
+					statusField, err := s.addNewResourceStautsField(specPolicyField, *obj, scalerObj.GetNamespace())
 					if err != nil {
 						klogv2.Error(err)
 						break
 					}
-					newResourceFields = append(newResourceFields, &statusField)
+					newResourceFields = append(newResourceFields, statusField)
 				}
 			ENDLOOP:
 			}
@@ -267,7 +267,7 @@ func (s *SimpleAutoScalerController) GetPolicyResult(scalerObj *autoscalev1alpha
 	result = make(map[string]PolicyResult)
 	for _, policy := range scalerObj.Spec.Policy {
 		// get scale rate value
-		value, err := s.Manager.GetScaleFactorValue(context.TODO(), *policy, scalerObj.GetNamespace())
+		value, err := s.Manager.GetScaleFactorValue(context.TODO(), policy, scalerObj.GetNamespace())
 		if err != nil {
 			// policy filed
 			if errors.Is(err, ErrNotFoundPolicyField) || errors.Is(err, ErrInvalidPolicyField) {

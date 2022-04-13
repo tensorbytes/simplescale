@@ -56,11 +56,7 @@ func NewScaleMutatingHandler() (h *ScaleMutatingHandler, err error) {
 // Handle handles admission requests.
 func (h *ScaleMutatingHandler) Handle(ctx context.Context, req kubeadmission.Request) kubeadmission.Response {
 	newobj := &unstructured.Unstructured{}
-	// reqJson, err := json.Marshal(req.AdmissionRequest)
-	// if err != nil {
-	// 	return kubeadmission.Errored(http.StatusBadRequest, err)
-	// }
-	// klogv2.Info("Request: ", string(reqJson))
+
 	err := h.Decoder.Decode(req, newobj)
 	if err != nil {
 		return kubeadmission.Errored(http.StatusBadRequest, err)
@@ -71,32 +67,34 @@ func (h *ScaleMutatingHandler) Handle(ctx context.Context, req kubeadmission.Req
 	objName := newobj.GetName()
 	objNamespace := newobj.GetNamespace()
 	// get cache
-	CacheResourceName := fmt.Sprintf("%s:%s:%s", objKind, objName, objNamespace)
+	CacheResourceName := GenCacheKey(objKind, objName, objNamespace)
 
 	Cachevalue, ok := h.CacheResource.Load(CacheResourceName)
 	// 不在缓存中直接让更新通过
 	if !ok {
+		klogv2.Info("resource name: ", CacheResourceName, "is not in simpleAutoScaler reference cache")
 		return kubeadmission.Allowed("yes")
 	}
-	scaleResource := Cachevalue.(autoscalev1alpha1.SimpleAutoScalerResources)
-	klogv2.Info("resource name: ", CacheResourceName)
+	scaleResource := Cachevalue.(WebhookResourceCacheItem)
+	klogv2.Info("resource name: ", CacheResourceName, "resource filed is ", scaleResource.String())
 
 	oldObjJson, err := json.Marshal(newobj)
 	if err != nil {
-		klogv2.Error(err)
+		klogv2.Error(err, "json marshal error for admission request newobj")
 		return kubeadmission.Allowed("yes")
 	}
 	// base scaleResource fix and update the resource filed
 	updateObjJson := oldObjJson
-	for _, field := range scaleResource.ResourceFields {
+	for _, field := range scaleResource.Resources.ResourceFields {
 		// Resource field 未初始化
 		if field.DesiredFieldValue.String() == "" || field.Path == "" {
+			klogv2.Info("resource name: ", CacheResourceName, "the desired field value is null or field path is null")
 			return kubeadmission.Allowed("yes")
 		}
 		// set desired value to old obj
 		updateObjJson, err = sjson.SetBytes(oldObjJson, field.Path, field.DesiredFieldValue.String())
 		if err != nil {
-			klogv2.Error(err)
+			klogv2.Error(fmt.Sprintf("the path (%s) and value (%s) set obj failed", field.Path, field.DesiredFieldValue.String()), err)
 			return kubeadmission.Allowed("yes")
 		}
 	}
@@ -114,7 +112,7 @@ func (h *ScaleMutatingHandler) Handle(ctx context.Context, req kubeadmission.Req
 
 	// resp := kubeadmission.Patched("keep for the simpleautoscaler", patchs...)
 
-	klogv2.Info("Response: ", resp.String())
+	klogv2.Info("Success Response: ", resp.String())
 	return resp
 }
 
@@ -131,8 +129,13 @@ func (h *ScaleMutatingHandler) Sync() {
 			}
 			for _, autoScalerItem := range simpleAutoScalerList.Items {
 				for _, scaleResource := range autoScalerItem.Status.Resources {
-					name := fmt.Sprintf("%s:%s:%s", scaleResource.Target.Kind, scaleResource.Target.Name, autoScalerItem.Namespace)
-					h.CacheResource.Store(name, *scaleResource)
+					name := GenCacheKey(scaleResource.Target.Kind, scaleResource.Target.Name, autoScalerItem.Namespace)
+					cacheItem := WebhookResourceCacheItem{
+						Name:                 name,
+						SimpleAutoScalerName: autoScalerItem.Name,
+						Resources:            scaleResource,
+					}
+					h.CacheResource.Store(name, cacheItem)
 				}
 			}
 		}
@@ -143,4 +146,19 @@ func (h *ScaleMutatingHandler) Sync() {
 func (h *ScaleMutatingHandler) Close() {
 	h.stopCh <- 1
 	h.Ctx.Done()
+}
+
+// resource cache is use to filter requests
+type WebhookResourceCacheItem struct {
+	Name                 string
+	SimpleAutoScalerName string
+	Resources            autoscalev1alpha1.SimpleAutoScalerResources
+}
+
+func (w *WebhookResourceCacheItem) String() string {
+	return fmt.Sprintf("cache item name: %s, SimpleAutoScaler name: %s, fields: %v", w.Name, w.SimpleAutoScalerName, w.Resources.ResourceFields)
+}
+
+func GenCacheKey(kind, name, namespace string) string {
+	return fmt.Sprintf("[%s:%s:%s]", kind, name, namespace)
 }

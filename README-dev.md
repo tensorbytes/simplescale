@@ -21,5 +21,7 @@ controller-gen "crd:trivialVersions=true,preserveUnknownFields=false" rbac:roleN
 ```
 
 ```
-controller-gen object:headerFile="hack\\boilerplate.go.txt" paths="./..."
+$ controller-gen object:headerFile="hack\\boilerplate.go.txt" paths="./..."
+$ go fmt ./...
+$ go vet ./...
 ```

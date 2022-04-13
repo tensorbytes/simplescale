@@ -121,7 +121,7 @@ type SimpleAutoScalerSpec struct {
 	TargetRef *ScaleTargetResourceReference `json:"targetRef"`
 
 	// Policy is description rules to the relate parameter and update field
-	Policy []*ScaleResourcePolicy `json:"policy,omitempty"`
+	Policy []ScaleResourcePolicy `json:"policy,omitempty"`
 }
 
 // SimpleAutoScalerStatus defines the observed state of SimpleAutoScaler
@@ -133,7 +133,7 @@ type SimpleAutoScalerStatus struct {
 	Conditions []SimpleAutoScalerCondition `json:"conditions"`
 
 	// Resources which scaler select
-	Resources []*SimpleAutoScalerResources `json:"resources"`
+	Resources []SimpleAutoScalerResources `json:"resources"`
 
 	// // last time of upscale
 	// LastUpScaleTime metav1.Time `json:"lastUpScaleTime,omitempty"`
@@ -178,7 +178,7 @@ type SimpleAutoScalerResources struct {
 	// Target points to the scale controls resources
 	Target *autoscalingv1.CrossVersionObjectReference `json:"target,omitempty"`
 	// record information of scale target
-	ResourceFields []*ResourceStautsField `json:"resourceFields,omitempty"`
+	ResourceFields []ResourceStautsField `json:"resourceFields,omitempty"`
 }
 
 type ResourceStautsField struct {

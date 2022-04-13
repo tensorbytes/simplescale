@@ -326,13 +326,9 @@ func (in *SimpleAutoScalerResources) DeepCopyInto(out *SimpleAutoScalerResources
 	}
 	if in.ResourceFields != nil {
 		in, out := &in.ResourceFields, &out.ResourceFields
-		*out = make([]*ResourceStautsField, len(*in))
+		*out = make([]ResourceStautsField, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(ResourceStautsField)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
@@ -357,13 +353,9 @@ func (in *SimpleAutoScalerSpec) DeepCopyInto(out *SimpleAutoScalerSpec) {
 	}
 	if in.Policy != nil {
 		in, out := &in.Policy, &out.Policy
-		*out = make([]*ScaleResourcePolicy, len(*in))
+		*out = make([]ScaleResourcePolicy, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(ScaleResourcePolicy)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
@@ -390,13 +382,9 @@ func (in *SimpleAutoScalerStatus) DeepCopyInto(out *SimpleAutoScalerStatus) {
 	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
-		*out = make([]*SimpleAutoScalerResources, len(*in))
+		*out = make([]SimpleAutoScalerResources, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(SimpleAutoScalerResources)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }

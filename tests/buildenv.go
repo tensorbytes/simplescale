@@ -126,7 +126,7 @@ func (e *Env) CreateAutoScaler(name, targetRefName, targetRefField, scaleFactorN
 				APIVersion: "apps/v1",
 				Name:       targetRefName,
 			},
-			Policy: []*autoscalev1alpha1.ScaleResourcePolicy{
+			Policy: []autoscalev1alpha1.ScaleResourcePolicy{
 				{
 					Name:      "cpu-limit",
 					Field:     targetRefField,

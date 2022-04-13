@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
   name: recommendationscalefactors.autoscale.scale.shikanon.com
 spec:
@@ -39,7 +39,8 @@ spec:
               RecommendationScaleFactor
             properties:
               cooldown:
-                description: cooldown is the time of calcution
+                description: cooldown is the time of calcution, only affect statusFactor
+                  update and not affect the currentValue update
                 type: string
               desiredValue:
                 description: desiredValue

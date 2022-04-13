@@ -17,7 +17,7 @@ function buildRecommond(){
     echo "image: " registry.cn-beijing.aliyuncs.com/shikanon/simplescaler-recommender:$version
 }
 
-if [[ $component = "webhhok" ]];
+if [[ $component = "webhook" ]];
 then
     buildWebhook
 elif [[ $component = "updater" ]];

@@ -57,9 +57,9 @@ func TestUpdatePolicyResult(t *testing.T) {
 			Name: "test-cooldown",
 		},
 		Status: autoscalev1alpha1.SimpleAutoScalerStatus{
-			Resources: []*autoscalev1alpha1.SimpleAutoScalerResources{
+			Resources: []autoscalev1alpha1.SimpleAutoScalerResources{
 				{
-					ResourceFields: []*autoscalev1alpha1.ResourceStautsField{
+					ResourceFields: []autoscalev1alpha1.ResourceStautsField{
 						{
 							Name:              "cpu-requestes",
 							CurrentFieldValue: apiresource.MustParse("100m"),
@@ -158,14 +158,14 @@ func TestUpdateTargetResourceByDesired(t *testing.T) {
 			},
 		},
 		Status: autoscalev1alpha1.SimpleAutoScalerStatus{
-			Resources: []*autoscalev1alpha1.SimpleAutoScalerResources{
+			Resources: []autoscalev1alpha1.SimpleAutoScalerResources{
 				{
 					Target: &autoscalingv1.CrossVersionObjectReference{
 						Kind:       "Deployment",
 						APIVersion: "apps/v1",
 						Name:       objName,
 					},
-					ResourceFields: []*autoscalev1alpha1.ResourceStautsField{
+					ResourceFields: []autoscalev1alpha1.ResourceStautsField{
 						{
 							Name:              "cpu-requests",
 							Path:              "spec.template.spec.containers.0.resources.requests.cpu",
